@@ -33,6 +33,10 @@ def to_simplified(text):
         return converter.convert(text)
     return text
 
+def safe_text(text):
+    """强制编码清洗，防止UnicodeEncodeError"""
+    return text.encode('utf-8', errors='replace').decode('utf-8')
+
 def clean_text(text, book_name=""):
     text = re.sub(r'About this digital edition.*', '', text, flags=re.DOTALL)
     if book_name == "论语":
@@ -110,8 +114,9 @@ def load_builtin(filename, book_name):
 
 # ── 页面设置 ──────────────────────────────────────────────
 
+# ✅ 修复1：API key 从 secrets 读取，不再明文写在代码里
 client = OpenAI(
-    api_key="你的API_KEY",
+    api_key=st.secrets["DEEPSEEK_API_KEY"],
     base_url="https://api.deepseek.com"
 )
 
@@ -193,6 +198,7 @@ if text_content:
             with st.chat_message("user"):
                 st.markdown(prompt)
 
+            # ✅ 修复2：对古文内容做编码清洗，防止 UnicodeEncodeError
             system_prompt = f"""你是一个专业的古典文献研究助手，正在分析《{book_name}》。
 回答时请：
 1. 结合以下原文内容，引用具体章句
@@ -200,12 +206,13 @@ if text_content:
 3. 如原文无相关内容，请明确说明
 
 古籍原文（节选）：
-{text_content[:4000]}
+{safe_text(text_content[:4000])}
 """
             with st.chat_message("assistant"):
                 with st.spinner("思考中…"):
+                    # ✅ 修复3：模型名更新为 deepseek-v4-flash
                     response = client.chat.completions.create(
-                        model="deepseek-chat",
+                        model="deepseek-v4-flash",
                         messages=[
                             {"role": "system", "content": system_prompt},
                             *st.session_state.messages
@@ -231,41 +238,49 @@ if text_content:
         if run_freq:
             with st.spinner("分析中…"):
                 fig, freq = word_freq_chart(text_content, top_n)
-            if fig:
-                with col1:
-                    st.pyplot(fig)
-                st.subheader("频率数据表")
-                df = pd.DataFrame(freq, columns=["字", "频次"])
-                df["占比"] = (df["频次"] / df["频次"].sum() * 100).round(2).astype(str) + "%"
-                st.dataframe(df, use_container_width=True, hide_index=True)
+            # ✅ 修复4：词频结果存入 session_state，点其他按钮不会丢失
+            st.session_state['freq_fig'] = fig
+            st.session_state['freq_data'] = freq
 
-                col_csv, col_xlsx = st.columns(2)
-                with col_csv:
-                    csv = df.to_csv(index=False, encoding='utf-8-sig')
-                    st.download_button("📥 下载 CSV", csv,
-                        file_name=f"{book_name}_词频.csv", mime="text/csv")
-                with col_xlsx:
-                    xlsx = df_to_excel(df)
-                    st.download_button("📥 下载 Excel", xlsx,
-                        file_name=f"{book_name}_词频.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        if 'freq_data' in st.session_state and st.session_state['freq_data']:
+            fig = st.session_state['freq_fig']
+            freq = st.session_state['freq_data']
 
-                st.divider()
-                if st.button("📝 让AI解读这份词频数据"):
-                    top_words = "、".join([w for w, _ in freq[:10]])
-                    ai_prompt = (f"《{book_name}》中出现频率最高的10个字是：{top_words}。"
-                                 f"请从文献学和思想史角度分析这些高频字反映了什么核心主题？")
-                    with st.spinner("AI分析中…"):
-                        resp = client.chat.completions.create(
-                            model="deepseek-chat",
-                            messages=[
-                                {"role": "system", "content": "你是古典文献学专家，擅长从词频数据解读文本的思想主题。"},
-                                {"role": "user", "content": ai_prompt}
-                            ]
-                        )
-                        st.markdown(resp.choices[0].message.content)
-            else:
-                st.warning("未能提取有效字符，请检查文本内容")
+            with col1:
+                st.pyplot(fig)
+            st.subheader("频率数据表")
+            df = pd.DataFrame(freq, columns=["字", "频次"])
+            df["占比"] = (df["频次"] / df["频次"].sum() * 100).round(2).astype(str) + "%"
+            st.dataframe(df, use_container_width=True, hide_index=True)
+
+            col_csv, col_xlsx = st.columns(2)
+            with col_csv:
+                csv = df.to_csv(index=False, encoding='utf-8-sig')
+                st.download_button("📥 下载 CSV", csv,
+                    file_name=f"{book_name}_词频.csv", mime="text/csv")
+            with col_xlsx:
+                xlsx = df_to_excel(df)
+                st.download_button("📥 下载 Excel", xlsx,
+                    file_name=f"{book_name}_词频.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+            st.divider()
+            if st.button("📝 让AI解读这份词频数据"):
+                top_words = "、".join([w for w, _ in freq[:10]])
+                ai_prompt = (f"《{book_name}》中出现频率最高的10个字是：{top_words}。"
+                             f"请从文献学和思想史角度分析这些高频字反映了什么核心主题？")
+                with st.spinner("AI分析中…"):
+                    resp = client.chat.completions.create(
+                        model="deepseek-v4-flash",
+                        messages=[
+                            {"role": "system", "content": "你是古典文献学专家，擅长从词频数据解读文本的思想主题。"},
+                            {"role": "user", "content": ai_prompt}
+                        ]
+                    )
+                    st.session_state['freq_ai'] = resp.choices[0].message.content
+
+            if 'freq_ai' in st.session_state:
+                st.markdown(st.session_state['freq_ai'])
 
     with tab3:
         st.subheader("概念对比分析")
@@ -327,7 +342,7 @@ if text_content:
                 ai_prompt = f"""在《{book_name}》中，「{c1}」与「{c2}」的关系分析：
 
 共现章句：
-{context}
+{safe_text(context)}
 
 请分析：
 1. 两者在原文中呈现何种关系（并列、递进、对立、从属）？
@@ -335,7 +350,7 @@ if text_content:
 3. 从思想史角度，这两个概念的关系有何学术意义？"""
                 with st.spinner("AI分析中…"):
                     resp = client.chat.completions.create(
-                        model="deepseek-chat",
+                        model="deepseek-v4-flash",
                         messages=[
                             {"role": "system", "content": f"你是古典文献学专家，正在研究《{book_name}》中的核心概念。"},
                             {"role": "user", "content": ai_prompt}
