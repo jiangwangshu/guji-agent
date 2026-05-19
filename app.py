@@ -7,7 +7,18 @@ import matplotlib.pyplot as plt
 import matplotlib
 import io
 
-matplotlib.rcParams['font.family'] = ['SimHei', 'Arial Unicode MS', 'DejaVu Sans']
+import urllib.request
+import matplotlib.font_manager as fm
+try:
+    urllib.request.urlretrieve(
+        "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf",
+        "/tmp/NotoSansCJK.otf"
+    )
+    fm.fontManager.addfont("/tmp/NotoSansCJK.otf")
+    prop = fm.FontProperties(fname="/tmp/NotoSansCJK.otf")
+    matplotlib.rcParams['font.family'] = prop.get_name()
+except:
+    pass
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 try:
