@@ -34,7 +34,6 @@ def to_simplified(text):
     return text
 
 def safe_text(text):
-    """强制编码清洗，防止UnicodeEncodeError"""
     return text.encode('utf-8', errors='replace').decode('utf-8')
 
 def clean_text(text, book_name=""):
@@ -112,9 +111,15 @@ def load_builtin(filename, book_name):
     except FileNotFoundError:
         return None
 
+def clear_book_cache():
+    st.session_state['messages'] = []
+    for key in ['freq_fig', 'freq_data', 'freq_ai',
+                 'compare_both', 'compare_only1', 'compare_only2',
+                 'compare_c1', 'compare_c2', 'compare_ai']:
+        st.session_state.pop(key, None)
+
 # ── 页面设置 ──────────────────────────────────────────────
 
-# ✅ 修复1：API key 从 secrets 读取，不再明文写在代码里
 client = OpenAI(
     api_key=st.secrets["DEEPSEEK_API_KEY"],
     base_url="https://api.deepseek.com"
@@ -124,14 +129,50 @@ st.set_page_config(page_title="古典文献智能研究助手", layout="wide")
 st.title("📜 古典文献智能研究助手")
 st.caption("支持任意古籍 · 词频分析 · 概念对比 · 多轮问答")
 
+# ── 手机端文本选择 ──────────────────────────────────────────
+st.info("📱 手机用户：点击下方按钮切换文本；电脑用户：使用左侧边栏", icon="ℹ️")
+mobile_cols = st.columns(4)
+book_options = ["论语", "大学", "中庸", "上传文本"]
+if 'mobile_book' not in st.session_state:
+    st.session_state['mobile_book'] = "论语"
+
+for i, name in enumerate(book_options):
+    with mobile_cols[i]:
+        if st.button(name, use_container_width=True,
+                     type="primary" if st.session_state['mobile_book'] == name else "secondary"):
+            if st.session_state['mobile_book'] != name:
+                st.session_state['mobile_book'] = name
+                clear_book_cache()
+                st.rerun()
+
+st.divider()
+
 if not HAS_OPENCC:
-    st.warning("⚠️ 未检测到 opencc，繁简转换不可用。请运行：pip install opencc-python-reimplemented")
+    st.warning("⚠️ 未检测到 opencc，繁简转换不可用。")
 
 # ── 侧栏 ──────────────────────────────────────────────────
 
 with st.sidebar:
     st.header("📂 文本设置")
-    text_source = st.radio("选择文本来源", ["论语", "大学", "中庸", "上传自定义文本"])
+
+    sidebar_options = ["论语", "大学", "中庸", "上传自定义文本"]
+    default_idx = 0
+    if st.session_state.get('mobile_book') in sidebar_options:
+        default_idx = sidebar_options.index(st.session_state['mobile_book'])
+
+    text_source = st.radio(
+        "选择文本来源",
+        sidebar_options,
+        index=default_idx,
+        key="sidebar_source"
+    )
+
+    if 'last_book' not in st.session_state:
+        st.session_state['last_book'] = text_source
+    if text_source != st.session_state['last_book']:
+        st.session_state['last_book'] = text_source
+        st.session_state['mobile_book'] = text_source
+        clear_book_cache()
 
     if text_source == "论语":
         raw_text = load_builtin('lunyu.txt', '论语')
@@ -140,7 +181,6 @@ with st.sidebar:
             st.success(f"已加载《论语》，共 {len(raw_text)} 字")
         else:
             st.error("未找到 lunyu.txt")
-
     elif text_source == "大学":
         raw_text = load_builtin('daxue.txt', '大学')
         book_name = "大学"
@@ -148,7 +188,6 @@ with st.sidebar:
             st.success(f"已加载《大学》，共 {len(raw_text)} 字")
         else:
             st.error("未找到 daxue.txt")
-
     elif text_source == "中庸":
         raw_text = load_builtin('zhongyong.txt', '中庸')
         book_name = "中庸"
@@ -156,7 +195,6 @@ with st.sidebar:
             st.success(f"已加载《中庸》，共 {len(raw_text)} 字")
         else:
             st.error("未找到 zhongyong.txt")
-
     else:
         uploaded = st.file_uploader("上传古籍 txt 文件", type=['txt'])
         if uploaded:
@@ -198,7 +236,6 @@ if text_content:
             with st.chat_message("user"):
                 st.markdown(prompt)
 
-            # ✅ 修复2：对古文内容做编码清洗，防止 UnicodeEncodeError
             system_prompt = f"""你是一个专业的古典文献研究助手，正在分析《{book_name}》。
 回答时请：
 1. 结合以下原文内容，引用具体章句
@@ -210,7 +247,6 @@ if text_content:
 """
             with st.chat_message("assistant"):
                 with st.spinner("思考中…"):
-                    # ✅ 修复3：模型名更新为 deepseek-v4-flash
                     response = client.chat.completions.create(
                         model="deepseek-v4-flash",
                         messages=[
@@ -223,7 +259,7 @@ if text_content:
 
             st.session_state.messages.append({"role": "assistant", "content": answer})
 
-        if st.session_state.messages:
+        if st.session_state.get('messages'):
             if st.button("清空对话", key="clear"):
                 st.session_state.messages = []
                 st.rerun()
@@ -238,9 +274,9 @@ if text_content:
         if run_freq:
             with st.spinner("分析中…"):
                 fig, freq = word_freq_chart(text_content, top_n)
-            # ✅ 修复4：词频结果存入 session_state，点其他按钮不会丢失
             st.session_state['freq_fig'] = fig
             st.session_state['freq_data'] = freq
+            st.session_state.pop('freq_ai', None)
 
         if 'freq_data' in st.session_state and st.session_state['freq_data']:
             fig = st.session_state['freq_fig']
@@ -299,10 +335,25 @@ if text_content:
             st.write("")
             run_compare = st.button("开始对比", type="primary")
 
+        # ✅ 点"开始对比"时把结果存入 session_state
         if run_compare and concept1 and concept2:
             c1 = to_simplified(concept1)
             c2 = to_simplified(concept2)
             both, only1, only2 = concept_compare(text_content, c1, c2)
+            st.session_state['compare_c1'] = c1
+            st.session_state['compare_c2'] = c2
+            st.session_state['compare_both'] = both
+            st.session_state['compare_only1'] = only1
+            st.session_state['compare_only2'] = only2
+            st.session_state.pop('compare_ai', None)
+
+        # ✅ 从 session_state 读取并展示结果，下载和AI分析按钮不会丢失内容
+        if 'compare_both' in st.session_state:
+            c1 = st.session_state['compare_c1']
+            c2 = st.session_state['compare_c2']
+            both = st.session_state['compare_both']
+            only1 = st.session_state['compare_only1']
+            only2 = st.session_state['compare_only2']
 
             m1, m2, m3 = st.columns(3)
             m1.metric(f"「{c1}」+「{c2}」共现", f"{len(both)} 条")
@@ -356,7 +407,11 @@ if text_content:
                             {"role": "user", "content": ai_prompt}
                         ]
                     )
-                    st.markdown(resp.choices[0].message.content)
+                    st.session_state['compare_ai'] = resp.choices[0].message.content
+
+            # ✅ AI分析结果也从 session_state 读取，不会因下载按钮消失
+            if 'compare_ai' in st.session_state:
+                st.markdown(st.session_state['compare_ai'])
 
 else:
     st.info("👈 请在左侧选择或上传文本文件开始使用")
