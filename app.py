@@ -81,12 +81,16 @@ def word_freq_chart(text, top_n=20):
         return None, None
     freq = Counter(tokens).most_common(top_n)
     words, counts = zip(*freq)
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.barh(list(reversed(words)), list(reversed(counts)), color='#8B6914')
-    ax.set_xlabel("出现次数", fontsize=12)
-    ax.set_title(f"高频字 Top {top_n}", fontsize=14)
+    fig, ax = plt.subplots(figsize=(10, 5), facecolor='#f5f0e8')
+    ax.set_facecolor('#f5f0e8')
+    ax.barh(list(reversed(words)), list(reversed(counts)), color='#7a8c76')
+    ax.set_xlabel("出现次数", fontsize=12, color='#3e3022')
+    ax.set_title(f"高频字 Top {top_n}", fontsize=14, color='#24180a')
+    ax.tick_params(colors='#3e3022')
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_color('#c8bfaa')
+    ax.spines['bottom'].set_color('#c8bfaa')
     plt.tight_layout()
     return fig, freq
 
@@ -126,17 +130,207 @@ client = OpenAI(
 )
 
 st.set_page_config(page_title="古典文献智能研究助手", layout="wide")
+
+# ── 古典莫兰迪风格 CSS ────────────────────────────────────
+st.markdown("""
+<style>
+/* 全局背景：旧棉纸暖灰米白 */
+.stApp {
+    background-color: #f5f0e8 !important;
+}
+
+/* 侧边栏：浅燕麦色 */
+[data-testid="stSidebar"] {
+    background-color: #ede8de !important;
+    border-right: 1px solid #d4ccbc !important;
+}
+[data-testid="stSidebar"] * {
+    color: #3e3022 !important;
+}
+[data-testid="stSidebar"] .stRadio label {
+    color: #3e3022 !important;
+}
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+    color: #24180a !important;
+    letter-spacing: 0.12em;
+}
+
+/* 主标题 */
+h1 {
+    color: #24180a !important;
+    font-family: "STKaiti","KaiTi","楷体",Georgia,serif !important;
+    border-bottom: 1.5px solid #c8bfaa !important;
+    padding-bottom: 0.4em !important;
+    letter-spacing: 0.12em !important;
+}
+h2, h3 {
+    color: #3e3022 !important;
+    font-family: "STKaiti","KaiTi","楷体",Georgia,serif !important;
+    letter-spacing: 0.06em !important;
+}
+
+/* 正文字体 */
+p, li, .stMarkdown {
+    color: #3e3022 !important;
+    font-family: "STKaiti","KaiTi","楷体",Georgia,serif !important;
+}
+
+/* caption 小字 */
+.stCaption, caption {
+    color: #a09070 !important;
+}
+
+/* Tab 样式 */
+.stTabs [data-baseweb="tab-list"] {
+    background-color: transparent !important;
+    border-bottom: 1.5px solid #c8bfaa !important;
+    gap: 2px !important;
+}
+.stTabs [data-baseweb="tab"] {
+    color: #8a7a62 !important;
+    background-color: transparent !important;
+    border: 1px solid transparent !important;
+    border-bottom: none !important;
+    font-family: "STKaiti","KaiTi","楷体",Georgia,serif !important;
+    font-size: 0.95rem !important;
+    letter-spacing: 0.04em !important;
+    padding: 6px 20px !important;
+    border-radius: 2px 2px 0 0 !important;
+}
+.stTabs [aria-selected="true"] {
+    background-color: #f5f0e8 !important;
+    border: 1px solid #c8bfaa !important;
+    border-bottom: 1.5px solid #f5f0e8 !important;
+    color: #24180a !important;
+    font-weight: bold !important;
+}
+
+/* 主按钮：莫兰迪竹绿 */
+.stButton > button[kind="primary"],
+button[kind="primary"] {
+    background-color: #7a8c76 !important;
+    color: #f5f0e8 !important;
+    border: 1px solid #637060 !important;
+    border-radius: 2px !important;
+    font-family: "STKaiti","KaiTi","楷体",Georgia,serif !important;
+    letter-spacing: 0.05em !important;
+}
+.stButton > button[kind="primary"]:hover {
+    background-color: #8a9c86 !important;
+}
+
+/* 次级按钮：燕麦色 */
+.stButton > button[kind="secondary"],
+button[kind="secondary"] {
+    background-color: #ede8de !important;
+    color: #3e3022 !important;
+    border: 1px solid #c8bfaa !important;
+    border-radius: 2px !important;
+    font-family: "STKaiti","KaiTi","楷体",Georgia,serif !important;
+}
+.stButton > button[kind="secondary"]:hover {
+    background-color: #e4ddd2 !important;
+}
+
+/* 下载按钮 */
+.stDownloadButton > button {
+    background-color: #ede8de !important;
+    color: #3e3022 !important;
+    border: 1px solid #c8bfaa !important;
+    border-radius: 2px !important;
+    font-family: "STKaiti","KaiTi","楷体",Georgia,serif !important;
+}
+
+/* 输入框 */
+.stTextInput > div > div > input,
+.stChatInput textarea {
+    background-color: #faf7f1 !important;
+    border: 1px solid #c8bfaa !important;
+    border-radius: 2px !important;
+    color: #24180a !important;
+    font-family: "STKaiti","KaiTi","楷体",Georgia,serif !important;
+}
+
+/* 聊天输入框 */
+.stChatInput > div {
+    border: 1px solid #c8bfaa !important;
+    background-color: #faf7f1 !important;
+    border-radius: 2px !important;
+}
+
+/* 聊天气泡 */
+[data-testid="stChatMessage"] {
+    background-color: #ede8de !important;
+    border: 1px solid #d4ccbc !important;
+    border-radius: 3px !important;
+}
+
+/* Metric 数字：竹绿 */
+[data-testid="stMetricValue"] {
+    color: #7a8c76 !important;
+    font-family: "STKaiti","KaiTi","楷体",Georgia,serif !important;
+    font-size: 2rem !important;
+    font-weight: bold !important;
+}
+[data-testid="stMetricLabel"] {
+    color: #8a7a62 !important;
+}
+[data-testid="stMetric"] {
+    background-color: #e8e2d6 !important;
+    border: 1px solid #c8bfaa !important;
+    border-radius: 3px !important;
+    padding: 0.8rem !important;
+}
+
+/* 提示框 */
+.stAlert {
+    border-radius: 2px !important;
+    background-color: #ede8de !important;
+    border-left: 3px solid #7a8c76 !important;
+}
+
+/* success 框 */
+.stSuccess {
+    background-color: #e4ddd2 !important;
+    color: #3e3022 !important;
+}
+
+/* 分割线 */
+hr {
+    border-color: #d4ccbc !important;
+}
+
+/* 数据表格 */
+[data-testid="stDataFrame"] {
+    border: 1px solid #c8bfaa !important;
+}
+
+/* selectbox */
+.stSelectbox > div > div {
+    background-color: #faf7f1 !important;
+    border: 1px solid #c8bfaa !important;
+    border-radius: 2px !important;
+    color: #24180a !important;
+}
+
+/* slider */
+.stSlider > div > div > div {
+    background-color: #7a8c76 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ── 标题 ──────────────────────────────────────────────────
 st.title("📜 古典文献智能研究助手")
 st.caption("支持任意古籍 · 词频分析 · 概念对比 · 多轮问答")
-
-# ── 手机端提示（仅一行文字，不重复功能）──────────────────
 st.caption("📱 手机用户：点击左上角 ＞ 展开侧边栏，选择文本后开始使用")
 
 if not HAS_OPENCC:
     st.warning("⚠️ 未检测到 opencc，繁简转换不可用。")
 
 # ── 侧栏 ──────────────────────────────────────────────────
-
 with st.sidebar:
     st.header("📂 文本设置")
     text_source = st.radio(
@@ -196,7 +390,6 @@ with st.sidebar:
         text_content = None
 
 # ── 主区域 ────────────────────────────────────────────────
-
 if text_content:
     tab1, tab2, tab3 = st.tabs(["💬 多轮问答", "📊 词频分析", "🔍 概念对比"])
 
@@ -313,8 +506,8 @@ if text_content:
             run_compare = st.button("开始对比", type="primary")
 
         if run_compare and concept1 and concept2:
-            c1 = to_simplified(concept1)
-            c2 = to_simplified(concept2)
+            c1 = to_simplified(concept1.strip())
+            c2 = to_simplified(concept2.strip())
             both, only1, only2 = concept_compare(text_content, c1, c2)
             st.session_state['compare_c1'] = c1
             st.session_state['compare_c2'] = c2
@@ -385,7 +578,14 @@ if text_content:
                     st.session_state['compare_ai'] = resp.choices[0].message.content
 
             if 'compare_ai' in st.session_state:
-                st.markdown(st.session_state['compare_ai'])
+                st.markdown(
+                    f'<div style="background:#ede8de;border-left:3px solid #7a8c76;'
+                    f'border-radius:0 3px 3px 0;padding:14px 16px;'
+                    f'font-family:STKaiti,KaiTi,楷体,Georgia,serif;'
+                    f'font-size:0.95rem;color:#24180a;line-height:1.9;">'
+                    f'{st.session_state["compare_ai"]}</div>',
+                    unsafe_allow_html=True
+                )
 
 else:
     st.info("👈 请在左侧选择或上传文本文件开始使用")
