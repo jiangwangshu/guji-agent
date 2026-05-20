@@ -84,9 +84,9 @@ def word_freq_chart(text, top_n=20):
     fig, ax = plt.subplots(figsize=(10, 5), facecolor='#f5f0e8')
     ax.set_facecolor('#f5f0e8')
     ax.barh(list(reversed(words)), list(reversed(counts)), color='#7a8c76')
-    ax.set_xlabel("出现次数", fontsize=12, color='#3e3022')
-    ax.set_title(f"高频字 Top {top_n}", fontsize=14, color='#24180a')
-    ax.tick_params(colors='#3e3022')
+    ax.set_xlabel("出现次数", fontsize=13, color='#3e3022')
+    ax.set_title(f"高频字 Top {top_n}", fontsize=15, color='#24180a')
+    ax.tick_params(colors='#3e3022', labelsize=12)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.spines['left'].set_color('#c8bfaa')
@@ -131,55 +131,70 @@ client = OpenAI(
 
 st.set_page_config(page_title="古典文献智能研究助手", layout="wide")
 
-# ── 古典莫兰迪风格 CSS ────────────────────────────────────
+# ── CSS ──────────────────────────────────────────────────
 st.markdown("""
 <style>
-/* 全局背景：旧棉纸暖灰米白 */
-.stApp {
-    background-color: #f5f0e8 !important;
+/* 引入 Noto Serif SC（宋体风格，免费，Streamlit Cloud可用）*/
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap');
+
+/* 字体变量：正文用宋体风格，强调用黑体 */
+:root {
+    --font-song: "Noto Serif SC", "SimSun", "宋体", "STSong", Georgia, serif;
+    --font-hei:  "SimHei", "黑体", "STHeiti", sans-serif;
+    --font-fang: "FangSong", "仿宋", "STFangsong", "Noto Serif SC", serif;
 }
 
-/* 侧边栏：浅燕麦色 */
+/* 全局背景 */
+.stApp { background-color: #f5f0e8 !important; }
+
+/* 侧边栏 */
 [data-testid="stSidebar"] {
     background-color: #ede8de !important;
     border-right: 1px solid #d4ccbc !important;
 }
-[data-testid="stSidebar"] * {
-    color: #3e3022 !important;
-}
-[data-testid="stSidebar"] .stRadio label {
-    color: #3e3022 !important;
-}
+[data-testid="stSidebar"] * { color: #3e3022 !important; font-family: var(--font-song) !important; font-size: 1rem !important; }
 [data-testid="stSidebar"] h1,
 [data-testid="stSidebar"] h2,
 [data-testid="stSidebar"] h3 {
     color: #24180a !important;
-    letter-spacing: 0.12em;
+    font-family: var(--font-hei) !important;
+    font-size: 1.05rem !important;
+    letter-spacing: 0.08em !important;
 }
 
-/* 主标题 */
+/* 主标题 h1 — 黑体加粗，大字号 */
 h1 {
     color: #24180a !important;
-    font-family: "STKaiti","KaiTi","楷体",Georgia,serif !important;
+    font-family: var(--font-hei) !important;
+    font-size: 1.9rem !important;
+    font-weight: 700 !important;
     border-bottom: 1.5px solid #c8bfaa !important;
     padding-bottom: 0.4em !important;
-    letter-spacing: 0.12em !important;
+    letter-spacing: 0.1em !important;
 }
+
+/* h2 h3 — 黑体中等 */
 h2, h3 {
     color: #3e3022 !important;
-    font-family: "STKaiti","KaiTi","楷体",Georgia,serif !important;
+    font-family: var(--font-hei) !important;
+    font-size: 1.15rem !important;
+    font-weight: 600 !important;
     letter-spacing: 0.06em !important;
 }
 
-/* 正文字体 */
-p, li, .stMarkdown {
+/* 正文 — 宋体，字号稍大 */
+p, li, .stMarkdown, label {
     color: #3e3022 !important;
-    font-family: "STKaiti","KaiTi","楷体",Georgia,serif !important;
+    font-family: var(--font-song) !important;
+    font-size: 1rem !important;
+    line-height: 1.85 !important;
 }
 
-/* caption 小字 */
-.stCaption, caption {
+/* caption 小字 — 仿宋 */
+.stCaption {
     color: #a09070 !important;
+    font-family: var(--font-fang) !important;
+    font-size: 0.92rem !important;
 }
 
 /* Tab 样式 */
@@ -193,10 +208,10 @@ p, li, .stMarkdown {
     background-color: transparent !important;
     border: 1px solid transparent !important;
     border-bottom: none !important;
-    font-family: "STKaiti","KaiTi","楷体",Georgia,serif !important;
-    font-size: 0.95rem !important;
+    font-family: var(--font-song) !important;
+    font-size: 1rem !important;
     letter-spacing: 0.04em !important;
-    padding: 6px 20px !important;
+    padding: 7px 22px !important;
     border-radius: 2px 2px 0 0 !important;
 }
 .stTabs [aria-selected="true"] {
@@ -204,31 +219,35 @@ p, li, .stMarkdown {
     border: 1px solid #c8bfaa !important;
     border-bottom: 1.5px solid #f5f0e8 !important;
     color: #24180a !important;
-    font-weight: bold !important;
+    font-family: var(--font-hei) !important;
+    font-weight: 600 !important;
 }
 
-/* 主按钮：莫兰迪竹绿 */
-.stButton > button[kind="primary"],
-button[kind="primary"] {
+/* 主按钮：竹绿，黑体 */
+.stButton > button[kind="primary"] {
     background-color: #7a8c76 !important;
     color: #f5f0e8 !important;
     border: 1px solid #637060 !important;
     border-radius: 2px !important;
-    font-family: "STKaiti","KaiTi","楷体",Georgia,serif !important;
+    font-family: var(--font-hei) !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
     letter-spacing: 0.05em !important;
+    padding: 0.45rem 1.2rem !important;
 }
 .stButton > button[kind="primary"]:hover {
     background-color: #8a9c86 !important;
 }
 
-/* 次级按钮：燕麦色 */
-.stButton > button[kind="secondary"],
-button[kind="secondary"] {
+/* 次级按钮 */
+.stButton > button[kind="secondary"] {
     background-color: #ede8de !important;
     color: #3e3022 !important;
     border: 1px solid #c8bfaa !important;
     border-radius: 2px !important;
-    font-family: "STKaiti","KaiTi","楷体",Georgia,serif !important;
+    font-family: var(--font-song) !important;
+    font-size: 0.95rem !important;
+    padding: 0.4rem 1rem !important;
 }
 .stButton > button[kind="secondary"]:hover {
     background-color: #e4ddd2 !important;
@@ -240,17 +259,18 @@ button[kind="secondary"] {
     color: #3e3022 !important;
     border: 1px solid #c8bfaa !important;
     border-radius: 2px !important;
-    font-family: "STKaiti","KaiTi","楷体",Georgia,serif !important;
+    font-family: var(--font-song) !important;
+    font-size: 0.95rem !important;
 }
 
 /* 输入框 */
-.stTextInput > div > div > input,
-.stChatInput textarea {
+.stTextInput > div > div > input {
     background-color: #faf7f1 !important;
     border: 1px solid #c8bfaa !important;
     border-radius: 2px !important;
     color: #24180a !important;
-    font-family: "STKaiti","KaiTi","楷体",Georgia,serif !important;
+    font-family: var(--font-song) !important;
+    font-size: 1rem !important;
 }
 
 /* 聊天输入框 */
@@ -258,6 +278,11 @@ button[kind="secondary"] {
     border: 1px solid #c8bfaa !important;
     background-color: #faf7f1 !important;
     border-radius: 2px !important;
+}
+.stChatInput textarea {
+    font-family: var(--font-song) !important;
+    font-size: 1rem !important;
+    color: #24180a !important;
 }
 
 /* 聊天气泡 */
@@ -267,15 +292,17 @@ button[kind="secondary"] {
     border-radius: 3px !important;
 }
 
-/* Metric 数字：竹绿 */
+/* Metric 数字：竹绿，黑体加粗 */
 [data-testid="stMetricValue"] {
     color: #7a8c76 !important;
-    font-family: "STKaiti","KaiTi","楷体",Georgia,serif !important;
-    font-size: 2rem !important;
-    font-weight: bold !important;
+    font-family: var(--font-hei) !important;
+    font-size: 2.1rem !important;
+    font-weight: 700 !important;
 }
 [data-testid="stMetricLabel"] {
     color: #8a7a62 !important;
+    font-family: var(--font-song) !important;
+    font-size: 0.92rem !important;
 }
 [data-testid="stMetric"] {
     background-color: #e8e2d6 !important;
@@ -284,27 +311,23 @@ button[kind="secondary"] {
     padding: 0.8rem !important;
 }
 
-/* 提示框 */
+/* 提示/分析框 */
 .stAlert {
     border-radius: 2px !important;
     background-color: #ede8de !important;
     border-left: 3px solid #7a8c76 !important;
-}
-
-/* success 框 */
-.stSuccess {
-    background-color: #e4ddd2 !important;
-    color: #3e3022 !important;
+    font-family: var(--font-song) !important;
+    font-size: 1rem !important;
 }
 
 /* 分割线 */
-hr {
-    border-color: #d4ccbc !important;
-}
+hr { border-color: #d4ccbc !important; }
 
 /* 数据表格 */
 [data-testid="stDataFrame"] {
     border: 1px solid #c8bfaa !important;
+    font-family: var(--font-song) !important;
+    font-size: 1rem !important;
 }
 
 /* selectbox */
@@ -313,11 +336,18 @@ hr {
     border: 1px solid #c8bfaa !important;
     border-radius: 2px !important;
     color: #24180a !important;
+    font-family: var(--font-song) !important;
+    font-size: 1rem !important;
 }
 
 /* slider */
-.stSlider > div > div > div {
-    background-color: #7a8c76 !important;
+.stSlider > div > div > div { background-color: #7a8c76 !important; }
+
+/* radio */
+.stRadio label {
+    font-family: var(--font-song) !important;
+    font-size: 1rem !important;
+    color: #3e3022 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -486,7 +516,14 @@ if text_content:
                     st.session_state['freq_ai'] = resp.choices[0].message.content
 
             if 'freq_ai' in st.session_state:
-                st.markdown(st.session_state['freq_ai'])
+                st.markdown(
+                    f'<div style="background:#ede8de;border-left:3px solid #7a8c76;'
+                    f'border-radius:0 3px 3px 0;padding:14px 16px;'
+                    f'font-family:Noto Serif SC,SimSun,宋体,Georgia,serif;'
+                    f'font-size:1rem;color:#24180a;line-height:1.9;">'
+                    f'{st.session_state["freq_ai"]}</div>',
+                    unsafe_allow_html=True
+                )
 
     with tab3:
         st.subheader("概念对比分析")
@@ -581,8 +618,8 @@ if text_content:
                 st.markdown(
                     f'<div style="background:#ede8de;border-left:3px solid #7a8c76;'
                     f'border-radius:0 3px 3px 0;padding:14px 16px;'
-                    f'font-family:STKaiti,KaiTi,楷体,Georgia,serif;'
-                    f'font-size:0.95rem;color:#24180a;line-height:1.9;">'
+                    f'font-family:Noto Serif SC,SimSun,宋体,Georgia,serif;'
+                    f'font-size:1rem;color:#24180a;line-height:1.9;">'
                     f'{st.session_state["compare_ai"]}</div>',
                     unsafe_allow_html=True
                 )
