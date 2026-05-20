@@ -129,23 +129,8 @@ st.set_page_config(page_title="古典文献智能研究助手", layout="wide")
 st.title("📜 古典文献智能研究助手")
 st.caption("支持任意古籍 · 词频分析 · 概念对比 · 多轮问答")
 
-# ── 手机端文本选择 ──────────────────────────────────────────
-st.info("📱 手机用户：点击下方按钮切换文本；电脑用户：使用左侧边栏", icon="ℹ️")
-mobile_cols = st.columns(4)
-book_options = ["论语", "大学", "中庸", "上传文本"]
-if 'mobile_book' not in st.session_state:
-    st.session_state['mobile_book'] = "论语"
-
-for i, name in enumerate(book_options):
-    with mobile_cols[i]:
-        if st.button(name, use_container_width=True,
-                     type="primary" if st.session_state['mobile_book'] == name else "secondary"):
-            if st.session_state['mobile_book'] != name:
-                st.session_state['mobile_book'] = name
-                clear_book_cache()
-                st.rerun()
-
-st.divider()
+# ── 手机端提示（仅一行文字，不重复功能）──────────────────
+st.caption("📱 手机用户：点击左上角 ＞ 展开侧边栏，选择文本后开始使用")
 
 if not HAS_OPENCC:
     st.warning("⚠️ 未检测到 opencc，繁简转换不可用。")
@@ -154,16 +139,9 @@ if not HAS_OPENCC:
 
 with st.sidebar:
     st.header("📂 文本设置")
-
-    sidebar_options = ["论语", "大学", "中庸", "上传自定义文本"]
-    default_idx = 0
-    if st.session_state.get('mobile_book') in sidebar_options:
-        default_idx = sidebar_options.index(st.session_state['mobile_book'])
-
     text_source = st.radio(
         "选择文本来源",
-        sidebar_options,
-        index=default_idx,
+        ["论语", "大学", "中庸", "上传自定义文本"],
         key="sidebar_source"
     )
 
@@ -171,7 +149,6 @@ with st.sidebar:
         st.session_state['last_book'] = text_source
     if text_source != st.session_state['last_book']:
         st.session_state['last_book'] = text_source
-        st.session_state['mobile_book'] = text_source
         clear_book_cache()
 
     if text_source == "论语":
@@ -335,7 +312,6 @@ if text_content:
             st.write("")
             run_compare = st.button("开始对比", type="primary")
 
-        # ✅ 点"开始对比"时把结果存入 session_state
         if run_compare and concept1 and concept2:
             c1 = to_simplified(concept1)
             c2 = to_simplified(concept2)
@@ -347,7 +323,6 @@ if text_content:
             st.session_state['compare_only2'] = only2
             st.session_state.pop('compare_ai', None)
 
-        # ✅ 从 session_state 读取并展示结果，下载和AI分析按钮不会丢失内容
         if 'compare_both' in st.session_state:
             c1 = st.session_state['compare_c1']
             c2 = st.session_state['compare_c2']
@@ -409,7 +384,6 @@ if text_content:
                     )
                     st.session_state['compare_ai'] = resp.choices[0].message.content
 
-            # ✅ AI分析结果也从 session_state 读取，不会因下载按钮消失
             if 'compare_ai' in st.session_state:
                 st.markdown(st.session_state['compare_ai'])
 
